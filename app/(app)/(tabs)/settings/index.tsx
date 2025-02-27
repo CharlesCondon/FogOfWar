@@ -107,7 +107,7 @@ export default function SettingsScreen() {
                     </View>
                 </TouchableOpacity>
                 <View style={styles.divider} />
-                <TouchableOpacity
+                {/* <TouchableOpacity
                     onPress={() => router.push("/settings/color/dot")}
                 >
                     <View style={[styles.section, styles.statsContainer]}>
@@ -124,7 +124,7 @@ export default function SettingsScreen() {
                         </View>
                     </View>
                 </TouchableOpacity>
-                <View style={styles.divider} />
+                <View style={styles.divider} /> */}
                 <TouchableOpacity onPress={() => toggleUnits()}>
                     <View style={[styles.section, styles.statsContainer]}>
                         <View style={styles.statItem}>

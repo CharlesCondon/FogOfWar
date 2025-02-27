@@ -50,6 +50,7 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="alliance"
                 options={{
+                    headerShown: false,
                     title: "Alliance",
                     tabBarIcon: ({ color, focused }) => (
                         <MaterialCommunityIcons

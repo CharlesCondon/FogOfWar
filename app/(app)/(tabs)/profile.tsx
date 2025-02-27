@@ -33,96 +33,6 @@ function formatNumber(num: string) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function unionGroup(group) {
-    let newGroup = [];
-    for (let i = 0; i < group.length; i += 2) {
-        let a = group[i];
-        let b = i + 1 < group.length ? group[i + 1] : null;
-        if (b) {
-            newGroup.push(turf.union(turf.featureCollection([a, b])));
-        } else {
-            newGroup.push(a);
-        }
-    }
-    return newGroup;
-}
-function fasterUnion2(allGeometries) {
-    if (allGeometries.length === 1) {
-        return allGeometries[0];
-    }
-    if (allGeometries.length === 2) {
-        return turf.union(
-            turf.featureCollection([allGeometries[0], allGeometries[1]])
-        );
-    }
-    const size = Math.floor(allGeometries.length / 2);
-    const geom1 = fasterUnion2(allGeometries.slice(0, size));
-    const geom2 = fasterUnion2(allGeometries.slice(size));
-    return turf.union(turf.featureCollection([geom1, geom2]));
-}
-const unionStrategies = {
-    turfUnion: (validAreas: any[]) => {
-        try {
-            return turf.union(turf.featureCollection(validAreas));
-        } catch (e) {
-            console.error("Error in turfUnion:", e);
-            return null;
-        }
-    },
-
-    turfDissolve: (validAreas: any[]) => {
-        try {
-            return turf.dissolve(
-                turf.flatten(turf.featureCollection([...(validAreas as any)]))
-            );
-        } catch (e) {
-            console.error("Error in turfDissolve:", e);
-            return null;
-        }
-    },
-
-    fasterUnion: (validAreas: any[]) => {
-        try {
-            const mid = Math.floor(validAreas.length / 2);
-            let group1 = validAreas.slice(0, mid);
-            let group2 = validAreas.slice(mid);
-
-            while (group1.length > 1) {
-                group1 = unionGroup(group1);
-            }
-            while (group2.length > 1) {
-                group2 = unionGroup(group2);
-            }
-
-            if (group1.length === 1 && group2.length === 1) {
-                return turf.union(
-                    turf.featureCollection([group1[0], group2[0]])
-                );
-            }
-            return group1.length === 1 ? group1[0] : group2[0];
-        } catch (e) {
-            console.error("Error in fasterUnion:", e);
-            return null;
-        }
-    },
-
-    // Your second custom union function here
-    fasterUnion2: (allGeometries: any[]) => {
-        if (allGeometries.length === 1) {
-            return allGeometries[0];
-        }
-        if (allGeometries.length === 2) {
-            return turf.union(
-                turf.featureCollection([allGeometries[0], allGeometries[1]])
-            );
-        }
-        const size = Math.floor(allGeometries.length / 2);
-        const geom1 = fasterUnion2(allGeometries.slice(0, size));
-        const geom2 = fasterUnion2(allGeometries.slice(size));
-        return turf.union(turf.featureCollection([geom1, geom2]));
-    },
-};
-
 export default function ProfileScreen() {
     const { session, isLoading } = useSession();
     //const userContext = useContext(UserContext);
@@ -135,11 +45,6 @@ export default function ProfileScreen() {
 
     const [totalArea, setTotalArea] = useState<number | string>(0);
     const [activityTime, setActivityTime] = useState<string>("Week");
-    const [unionMethod, setUnionMethod] =
-        useState<keyof typeof unionStrategies>("turfUnion");
-    const [performanceResults, setPerformanceResults] = useState<
-        Record<string, number>
-    >({});
 
     const fetchUserData = async () => {
         if (!session) return;
@@ -162,124 +67,6 @@ export default function ProfileScreen() {
         let day = new Date(user.joinedDate).toLocaleDateString();
         return day;
     }
-
-    function measureExecutionTime(fn: () => any, label: string): [any, number] {
-        const start = Date.now();
-        const result = fn();
-        const end = Date.now();
-        const duration = end - start;
-        console.log(`${label} took ${duration.toFixed(2)}ms`);
-        return [result, duration];
-    }
-
-    // function fasterUnion2(allGeometries) {
-    //     if (allGeometries.length === 1) {
-    //         return allGeometries[0];
-    //     }
-    //     if (allGeometries.length === 2) {
-    //         return turf.union(
-    //             turf.featureCollection([allGeometries[0], allGeometries[1]])
-    //         );
-    //     }
-    //     const size = Math.floor(allGeometries.length / 2);
-    //     const geom1 = fasterUnion2(allGeometries.slice(0, size));
-    //     const geom2 = fasterUnion2(allGeometries.slice(size));
-    //     return turf.union(turf.featureCollection([geom1, geom2]));
-    // }
-
-    // function fasterUnion(allGeometries) {
-    //     const mid = Math.floor(allGeometries.length / 2);
-    //     let group1 = allGeometries.slice(0, mid);
-    //     let group2 = allGeometries.slice(mid);
-
-    //     while (group1.length > 1) {
-    //         group1 = unionGroup(group1);
-    //     }
-    //     while (group2.length > 1) {
-    //         group2 = unionGroup(group2);
-    //     }
-
-    //     let result;
-    //     if (group1.length === 1 && group2.length === 1) {
-    //         result = turf.union(turf.featureCollection([group1[0], group2[0]]));
-    //     } else if (group1.length === 1) {
-    //         result = group1[0];
-    //     } else {
-    //         result = group2[0];
-    //     }
-
-    //     return result;
-    // }
-
-    // function unionGroup(group) {
-    //     let newGroup = [];
-    //     for (let i = 0; i < group.length; i += 2) {
-    //         let a = group[i];
-    //         let b = i + 1 < group.length ? group[i + 1] : null;
-    //         if (b) {
-    //             newGroup.push(turf.union(turf.featureCollection([a, b])));
-    //         } else {
-    //             newGroup.push(a);
-    //         }
-    //     }
-    //     return newGroup;
-    // }
-
-    // check for changes to activity log and update total area
-    useEffect(() => {
-        if (!user?.activityLog || Object.keys(user?.activityLog).length === 0)
-            return;
-
-        // Extract and flatten all revealed areas from the activity log.
-        const allAreas = Object.values(user.activityLog).map(
-            (log: any) => log.revealedArea
-        );
-        const validAreas: Feature<Polygon | MultiPolygon, GeoJsonProperties>[] =
-            allAreas
-                .flat(Infinity)
-                .filter(
-                    (area: any) =>
-                        area &&
-                        area.geometry &&
-                        Array.isArray(area.geometry.coordinates) &&
-                        area.geometry.coordinates.length > 0
-                );
-
-        // If there are no valid areas, set totalArea to 0.
-        if (validAreas.length === 0) {
-            setTotalArea(0);
-            return;
-        }
-
-        let totalArea = 0;
-        if (validAreas) {
-            try {
-                totalArea = turf.area(
-                    turf.dissolve(
-                        turf.flatten(
-                            turf.featureCollection([...(validAreas as any)])
-                        )
-                    )
-                );
-            } catch (e) {
-                console.error("Error calculating area on unified feature:", e);
-                totalArea = 0;
-            }
-        } else {
-            // If union failed, fallback on the area of the first valid area.
-            try {
-                totalArea = turf.area(validAreas[0]);
-            } catch (e) {
-                console.error(
-                    "Error calculating area on first valid feature:",
-                    e
-                );
-                totalArea = 0;
-            }
-        }
-
-        setTotalArea(totalArea);
-    }, [user?.activityLog]);
 
     // units of measurement conversion helper function
     function getFeatureArea(revealedArea: any): number {
@@ -489,35 +276,141 @@ export default function ProfileScreen() {
         }
         return 0;
     }
+    function getStartOfPeriod(now: Date, period: string | string[]) {
+        switch (period) {
+            // case "Daily":
+            //     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            case "Week":
+                const firstDayOfWeek = now.getDate() - now.getDay();
+                return new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    firstDayOfWeek
+                );
+            case "Month":
+                return new Date(now.getFullYear(), now.getMonth(), 1);
+            case "Year":
+                return new Date(now.getFullYear(), 0, 1);
+            // case "AllTime":
+            //     return new Date(0); // Epoch time
+            default:
+                return now;
+        }
+    }
+    function getDistanceOverTime() {
+        const now = new Date();
+        const startOfPeriod = getStartOfPeriod(now, activityTime);
+        const activityLog = user?.activityLog || {};
+        const activityEntries = Object.entries(activityLog);
+
+        const filteredActivities = activityEntries.filter(([date]) => {
+            const activityDate = new Date(date);
+
+            // Normalize both dates in UTC to ignore time
+            const normalizedActivityDate = new Date(
+                Date.UTC(
+                    activityDate.getUTCFullYear(),
+                    activityDate.getUTCMonth(),
+                    activityDate.getUTCDate()
+                )
+            );
+            const normalizedStartOfPeriod = new Date(
+                Date.UTC(
+                    startOfPeriod.getUTCFullYear(),
+                    startOfPeriod.getUTCMonth(),
+                    startOfPeriod.getUTCDate()
+                )
+            );
+
+            return normalizedActivityDate >= normalizedStartOfPeriod;
+        });
+
+        const allCoordinates = filteredActivities.map(
+            ([_, activity]: [string, any]) => activity.coordinate
+        );
+
+        const data = allCoordinates.map((day) => {
+            if (!day || day.length === 1) return 0;
+
+            let dist = 0;
+
+            for (let i = 0; i < day.length - 2; i++) {
+                let options = user?.metric
+                    ? { units: "kilometers" }
+                    : { units: "miles" };
+                let start = day[i];
+                let end = day[i + 1];
+                let d = turf.distance(start, end, options as any);
+                //console.log(d);
+                dist += d;
+            }
+
+            return dist;
+        });
+
+        let totalDist = data.reduce((total, curr) => (total += curr), 0);
+        return totalDist;
+    }
     function getTimeData() {
-        const today = new Date();
-        const lastXDays = [];
-        let days = 0;
-        if (activityTime === "Week") {
-            days = 6;
-        } else if (activityTime === "Month") {
-            days = 30;
-        } else {
-            days = 364;
-        }
+        const now = new Date();
+        const startOfPeriod = getStartOfPeriod(now, activityTime);
+        const activityLog = user?.activityLog || {};
+        const activityEntries = Object.entries(activityLog);
 
-        // Get the past 7 days' dates formatted as YYYY-MM-DD
-        for (let i = days; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            lastXDays.push(formatDate(date));
-        }
+        const filteredActivities = activityEntries.filter(([date]) => {
+            const activityDate = new Date(date);
 
-        const data = lastXDays.map((day) => {
-            const revealedArea = user?.activityLog?.[day]?.revealedArea;
+            // Normalize both dates in UTC to ignore time
+            const normalizedActivityDate = new Date(
+                Date.UTC(
+                    activityDate.getUTCFullYear(),
+                    activityDate.getUTCMonth(),
+                    activityDate.getUTCDate()
+                )
+            );
+            const normalizedStartOfPeriod = new Date(
+                Date.UTC(
+                    startOfPeriod.getUTCFullYear(),
+                    startOfPeriod.getUTCMonth(),
+                    startOfPeriod.getUTCDate()
+                )
+            );
+
+            return normalizedActivityDate >= normalizedStartOfPeriod;
+        });
+
+        const allCoordinates = filteredActivities.map(
+            ([_, activity]: [string, any]) => activity.revealedArea
+        );
+
+        // const today = new Date();
+        // const lastXDays = [];
+        // let days = 0;
+        // if (activityTime === "Week") {
+        //     days = 6;
+        // } else if (activityTime === "Month") {
+        //     days = 30;
+        // } else {
+        //     days = 364;
+        // }
+
+        // // Get the past 7 days' dates formatted as YYYY-MM-DD
+        // for (let i = days; i >= 0; i--) {
+        //     const date = new Date(today);
+        //     date.setDate(today.getDate() - i);
+        //     lastXDays.push(formatDate(date));
+        // }
+
+        const data = allCoordinates.map((day) => {
+            //const revealedArea = user?.activityLog?.[day]?.revealedArea;
 
             // If nothing is saved for the day, return 0.
-            if (!revealedArea) return 0;
+            if (!day) return 0;
 
             let area = 0;
-            if (Array.isArray(revealedArea)) {
+            if (Array.isArray(day)) {
                 // Sum the area of each valid feature.
-                area = revealedArea.reduce((total, feature) => {
+                area = day.reduce((total, feature) => {
                     if (
                         feature &&
                         feature.geometry &&
@@ -537,12 +430,12 @@ export default function ProfileScreen() {
                     return total;
                 }, 0);
             } else if (
-                revealedArea.geometry &&
-                Array.isArray(revealedArea.geometry.coordinates) &&
-                revealedArea.geometry.coordinates.length > 0
+                day.geometry &&
+                Array.isArray(day.geometry.coordinates) &&
+                day.geometry.coordinates.length > 0
             ) {
                 try {
-                    area = turf.area(revealedArea);
+                    area = turf.area(day);
                 } catch (e) {
                     console.error("Error calculating area:", e);
                     area = 0;
@@ -555,13 +448,23 @@ export default function ProfileScreen() {
             return user?.metric ? area / 1000 : area / 1609;
         });
 
-        const labels = lastXDays.map((d, i) => {
+        const labels = filteredActivities.map((d, i) => {
+            const [year, month, day] = d[0].split("-");
             if (activityTime === "Month") {
-                if (i % 5 !== 0) return "";
+                if (
+                    i % 7 !== 0 &&
+                    i !== 0 &&
+                    i !== filteredActivities.length - 1
+                )
+                    return "";
             } else if (activityTime === "Year") {
-                if (i % 30 !== 0) return "";
+                if (
+                    i % 30 !== 0 &&
+                    i !== 0 &&
+                    i !== filteredActivities.length - 1
+                )
+                    return "";
             }
-            const [year, month, day] = d.split("-"); // Split YYYY-MM-DD
             return `${parseInt(month)}/${parseInt(day)}`; // Convert to "M/D"
         });
 
@@ -593,12 +496,15 @@ export default function ProfileScreen() {
         },
     };
 
+    // Memoize extraction of valid areas from the activity log (this could be heavy if the log is large)
     const validAreas = useMemo(() => {
-        if (!user?.activityLog || Object.keys(user?.activityLog).length === 0)
-            return [];
-
-        const allAreas = Object.values(user.activityLog)
-            .map((log: any) => log.revealedArea)
+        if (!user?.activityLog) return [];
+        // Extract the revealedArea from each log entry
+        const allAreas = Object.values(user.activityLog).map(
+            (log: any) => log.revealedArea
+        );
+        // Flatten deeply and filter out any invalid or empty geometries.
+        const areas = allAreas
             .flat(Infinity)
             .filter(
                 (area: any) =>
@@ -607,158 +513,56 @@ export default function ProfileScreen() {
                     Array.isArray(area.geometry.coordinates) &&
                     area.geometry.coordinates.length > 0
             );
-
-        return allAreas;
+        return areas;
     }, [user?.activityLog]);
 
-    const testUnionMethods = useCallback(async () => {
-        const results: Record<string, number> = {};
-
-        // Test each strategy
-        for (const [name, strategy] of Object.entries(unionStrategies)) {
-            const [result, duration] = measureExecutionTime(
-                () => strategy(validAreas),
-                name
-            );
-            results[name] = duration;
-
-            // Verify the result is valid
-            if (result) {
-                try {
-                    const area = turf.area(result);
-                    console.log(`${name} produced valid area: ${area}`);
-                } catch (e) {
-                    console.error(`${name} produced invalid result:`, e);
-                }
-            }
-        }
-
-        setPerformanceResults(results);
-
-        // Use the fastest method for future calculations
-        const fastestMethod = Object.entries(results).reduce((a, b) =>
-            a[1] < b[1] ? a : b
-        )[0] as keyof typeof unionStrategies;
-        setUnionMethod(fastestMethod);
-        console.log(`Fastest method: ${fastestMethod}`);
-
-        return results;
-    }, [validAreas]);
-
+    // Defer heavy total area calculation until after any interactions (animations, etc.) are finished.
     useEffect(() => {
-        if (!validAreas.length) {
+        if (validAreas.length === 0) {
+            // if no valid areas, reset total area.
             setTotalArea(0);
             return;
         }
-
+        let isCancelled = false;
         const task = InteractionManager.runAfterInteractions(() => {
-            let isCancelled = false;
-
+            let computedTotal = 0;
             try {
-                const [unifiedFeature, duration] = measureExecutionTime(
-                    () => unionStrategies[unionMethod](validAreas),
-                    `Area calculation using ${unionMethod}`
+                // Using Turf.js union to merge all polygons and then getting the area.
+                // This operation might be heavy if there are many features.
+                const unified = turf.dissolve(
+                    turf.flatten(turf.featureCollection([...validAreas]))
                 );
-
-                if (!isCancelled && unifiedFeature) {
-                    const area = turf.area(unifiedFeature);
-                    setTotalArea(area);
+                if (unified) {
+                    computedTotal = turf.area(unified);
+                } else {
+                    // Fallback: calculate area for first valid area if union fails.
+                    computedTotal = turf.area(validAreas[0]);
                 }
             } catch (e) {
-                console.error("Error calculating area:", e);
-                if (!isCancelled) setTotalArea(0);
+                console.error("Error during heavy area calculation:", e);
+                computedTotal = 0;
             }
-
-            return () => {
-                isCancelled = true;
-            };
+            if (!isCancelled) {
+                setTotalArea(computedTotal);
+            }
         });
-
-        return () => task.cancel();
-    }, [validAreas, unionMethod]);
-
-    const runPerformanceTest = () => {
-        InteractionManager.runAfterInteractions(() => {
-            testUnionMethods().then((results) => {
-                console.log("Performance test results:", results);
-            });
-        });
-    };
-
-    // Memoize extraction of valid areas from the activity log (this could be heavy if the log is large)
-    // const validAreas = useMemo(() => {
-    //     if (!user?.activityLog) return [];
-    //     // Extract the revealedArea from each log entry
-    //     const allAreas = Object.values(user.activityLog).map(
-    //         (log: any) => log.revealedArea
-    //     );
-    //     // Flatten deeply and filter out any invalid or empty geometries.
-    //     const areas = allAreas
-    //         .flat(Infinity)
-    //         .filter(
-    //             (area: any) =>
-    //                 area &&
-    //                 area.geometry &&
-    //                 Array.isArray(area.geometry.coordinates) &&
-    //                 area.geometry.coordinates.length > 0
-    //         );
-    //     return areas;
-    // }, [user?.activityLog]);
-
-    // Defer heavy total area calculation until after any interactions (animations, etc.) are finished.
-    // useEffect(() => {
-    //     if (validAreas.length === 0) {
-    //         // if no valid areas, reset total area.
-    //         setTotalArea(0);
-    //         return;
-    //     }
-
-    //     let isCancelled = false;
-    //     const task = InteractionManager.runAfterInteractions(() => {
-    //         let computedTotal = 0;
-    //         try {
-    //             // Using Turf.js union to merge all polygons and then getting the area.
-    //             // This operation might be heavy if there are many features.
-    //             const unified = turf.union(
-    //                 turf.featureCollection([...validAreas])
-    //             );
-    //             if (unified) {
-    //                 computedTotal = turf.area(unified);
-    //             } else {
-    //                 // Fallback: calculate area for first valid area if union fails.
-    //                 computedTotal = turf.area(validAreas[0]);
-    //             }
-    //         } catch (e) {
-    //             console.error("Error during heavy area calculation:", e);
-    //             computedTotal = 0;
-    //         }
-    //         if (!isCancelled) {
-    //             setTotalArea(computedTotal);
-    //         }
-    //     });
-    //     return () => {
-    //         isCancelled = true;
-    //         // Cancel the interaction manager task if possible.
-    //         if (typeof task.cancel === "function") {
-    //             task.cancel();
-    //         }
-    //     };
-    // }, [validAreas]);
+        return () => {
+            isCancelled = true;
+            // Cancel the interaction manager task if possible.
+            if (typeof task.cancel === "function") {
+                task.cancel();
+            }
+        };
+    }, [validAreas]);
 
     return (
         <ScrollView style={styles.pageContainer}>
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             <View style={styles.container}>
                 <View style={[styles.headerContainer, styles.section]}>
-                    <FontAwesome name="user-circle" color="white" size={48} />
+                    {/* <FontAwesome name="user-circle" color="white" size={48} /> */}
                     <Text style={styles.text}>{user?.name}</Text>
                 </View>
-                <Button
-                    onPress={() => {
-                        runPerformanceTest();
-                    }}
-                    title="Hello"
-                />
                 {user && (
                     <>
                         <StatCard
@@ -847,7 +651,7 @@ export default function ProfileScreen() {
                                     labels: labels,
                                     datasets: [{ data: data }],
                                 }}
-                                width={screenWidth - 40}
+                                width={screenWidth - 80}
                                 height={220}
                                 yAxisSuffix={user.metric ? " km²" : " mi²"}
                                 yAxisInterval={getChartAxisInterval()}
@@ -862,25 +666,56 @@ export default function ProfileScreen() {
                             />
                         </View>
                         {getWeeklyTotal() > 0 ? (
-                            <View
-                                style={[
-                                    styles.squareStatItem,
-                                    { marginHorizontal: 10 },
-                                ]}
-                            >
-                                <Text
+                            <>
+                                <View
                                     style={[
-                                        styles.subtext,
-                                        styles.subtextValue,
-                                        { textAlign: "center", lineHeight: 20 },
+                                        styles.squareStatItem,
+                                        { marginHorizontal: 10 },
                                     ]}
                                 >
-                                    You covered{" "}
-                                    {formatNumber(getWeeklyTotal().toFixed(1))}
-                                    {user.metric ? " km²" : " mi²"}
-                                    {"\n"} this week!
-                                </Text>
-                            </View>
+                                    <Text
+                                        style={[
+                                            styles.subtext,
+                                            styles.subtextValue,
+                                            {
+                                                textAlign: "center",
+                                                lineHeight: 20,
+                                            },
+                                        ]}
+                                    >
+                                        You covered{" "}
+                                        {formatNumber(
+                                            getWeeklyTotal().toFixed(1)
+                                        )}
+                                        {user.metric ? " km²" : " mi²"}
+                                        {"\n"} this {activityTime}!
+                                    </Text>
+                                </View>
+                                <View
+                                    style={[
+                                        styles.squareStatItem,
+                                        { marginHorizontal: 10 },
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.subtext,
+                                            styles.subtextValue,
+                                            {
+                                                textAlign: "center",
+                                                lineHeight: 20,
+                                            },
+                                        ]}
+                                    >
+                                        You traveled{" "}
+                                        {formatNumber(
+                                            getDistanceOverTime().toFixed(2)
+                                        )}
+                                        {user.metric ? " km" : " mi"}
+                                        {"\n"} this {activityTime}!
+                                    </Text>
+                                </View>
+                            </>
                         ) : (
                             <></>
                         )}
@@ -1000,7 +835,8 @@ const styles = StyleSheet.create({
     },
     text: {
         color: "#fff",
-        fontSize: 24,
+        fontSize: 32,
+        fontWeight: 700,
     },
     subtext: {
         color: "#fff",

@@ -74,7 +74,7 @@ export default function Index() {
     const [todaysArea, setTodaysArea] = useState<any>(null);
     const [staticRevealedArea, setStaticRevealedArea] = useState<any>(null);
 
-    const unionDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    // const unionDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
     const today = formatDate(new Date());
     const camera = useRef<Mapbox.Camera>(null);
@@ -104,13 +104,36 @@ export default function Index() {
                     tempArr.push(area);
                 }
             });
-            setStaticRevealedArea(tempArr);
 
-            const initialDifference = accumulatedStatic
-                ? turf.difference(
-                      turf.featureCollection([worldPolygon, ...tempArr])
-                  )
-                : worldPolygon;
+            const validPreviousAreas = tempArr
+                .flat(Infinity)
+                .filter(
+                    (area: any) =>
+                        area &&
+                        area.geometry &&
+                        Array.isArray(area.geometry.coordinates) &&
+                        area.geometry.coordinates.length > 0
+                );
+
+            setStaticRevealedArea(validPreviousAreas);
+            let initialDifference;
+            if (validPreviousAreas && validPreviousAreas.length === 1) {
+                initialDifference = turf.difference(
+                    turf.featureCollection([
+                        worldPolygon,
+                        validPreviousAreas[0],
+                    ])
+                );
+            } else if (validPreviousAreas && validPreviousAreas.length >= 1) {
+                initialDifference = turf.difference(
+                    turf.featureCollection([
+                        worldPolygon,
+                        ...validPreviousAreas,
+                    ])
+                );
+            } else {
+                initialDifference = worldPolygon;
+            }
 
             setInitialArea(initialDifference || worldPolygon);
         }
@@ -187,7 +210,7 @@ export default function Index() {
             location.latitude,
         ];
 
-        setTodaysCoordinates((prev) => {
+        setTodaysCoordinates((prev: any) => {
             if (!prev.length) return [center];
             const lastCoord = prev[prev.length - 1];
             const distance = turf.distance(
@@ -201,19 +224,19 @@ export default function Index() {
             return prev;
         });
 
-        if (unionDebounceRef.current) clearTimeout(unionDebounceRef.current);
-        unionDebounceRef.current = setTimeout(() => {
-            const radius = 50; // meters
-            const newCircle = turf.circle(center, radius, {
-                steps: 12,
-                units: "meters",
-            });
-            if (!todaysArea) {
-                setTodaysArea([newCircle]);
-            } else {
-                setTodaysArea((prev: any) => [...prev, newCircle]);
-            }
-        }, 500);
+        // if (unionDebounceRef.current) clearTimeout(unionDebounceRef.current);
+        // unionDebounceRef.current = setTimeout(() => {
+        const radius = 50; // meters
+        const newCircle = turf.circle(center, radius, {
+            steps: 12,
+            units: "meters",
+        });
+        if (!todaysArea) {
+            setTodaysArea([newCircle]);
+        } else {
+            setTodaysArea((prev: any) => [...prev, newCircle]);
+        }
+        //}, 500);
     }, [location]);
 
     // useEffect(() => {
@@ -228,7 +251,7 @@ export default function Index() {
     //                 longitude: prev.longitude + 0.0,
     //             };
     //         });
-    //     }, 1000); // update every 1 second; adjust as needed
+    //     }, 100); // update every 1 second; adjust as needed
     //     return () => clearInterval(simulationInterval);
     // }, []);
 
@@ -242,9 +265,18 @@ export default function Index() {
                 : null;
 
         // Combine static and today’s data:
-        let totalRevealedArea = todaysArea
-            ? [...staticRevealedArea, ...todaysArea]
-            : [...staticRevealedArea];
+        let totalRevealedArea;
+        if (todaysArea) {
+            if (staticRevealedArea) {
+                totalRevealedArea = [...staticRevealedArea, ...todaysArea];
+            } else {
+                totalRevealedArea = [...todaysArea];
+            }
+        } else if (staticRevealedArea) {
+            totalRevealedArea = [...staticRevealedArea];
+        } else {
+            return null;
+        }
 
         return {
             totalRevealedArea,
@@ -260,7 +292,7 @@ export default function Index() {
         const flatRevealed = computedData.totalRevealedArea
             .flat(Infinity)
             .filter(
-                (f) =>
+                (f: { geometry: { coordinates: string | any[] } }) =>
                     f &&
                     f.geometry &&
                     Array.isArray(f.geometry.coordinates) &&
@@ -284,7 +316,7 @@ export default function Index() {
                 ? difference ?? worldPolygon
                 : worldPolygon;
 
-        setFogGeoJSON(fogPolygon);
+        setFogGeoJSON(turf.polygonSmooth(fogPolygon));
         setPathLine(computedData.pathLine);
 
         // Optionally update persistent storage for today's log if new coordinates are added.

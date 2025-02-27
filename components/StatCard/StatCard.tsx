@@ -24,7 +24,10 @@ export default function StatCard({
     percent: boolean;
 }) {
     // For text type stats (like the home country), you may choose a different check.
-    const shouldShowSpinner = typeof value === "number" ? value === 0 : !value;
+    const shouldShowSpinner =
+        typeof value === "number"
+            ? value === 0
+            : !value || (parseFloat(value) === 0 && title === "World Revealed");
     return size === "small" ? (
         <View style={styles.squareStatItem}>
             <View style={styles.statIconValue}>

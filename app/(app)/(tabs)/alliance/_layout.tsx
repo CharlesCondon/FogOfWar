@@ -17,17 +17,13 @@ export default function SocialLayout() {
         >
             <Stack.Screen
                 name="index"
-                options={{ title: "Social", headerBackVisible: false }}
+                options={{ title: "Alliance", headerBackVisible: false }}
             />
 
             <Stack.Screen
-                name="leaderboard/[area]/[time]"
+                name="ranks/[team]"
                 options={({ route }) => ({
-                    title:
-                        capitalizeFirstLetter((route.params as any).area) +
-                        " " +
-                        capitalizeFirstLetter((route.params as any).time) +
-                        " Leaderboard",
+                    title: "Ranks",
                 })}
             />
         </Stack>

@@ -4,7 +4,9 @@ import {
     MaterialCommunityIcons,
     Fontisto,
     FontAwesome5,
+    FontAwesome6,
 } from "@expo/vector-icons";
+// import { Image } from "expo-image";
 import { useContext, useEffect, useState } from "react";
 import {
     Text,
@@ -16,6 +18,9 @@ import {
 import { UserContext } from "@/context/UserContext";
 import { router } from "expo-router";
 import LoadingScreen from "@/components/Loading/Loading";
+
+const blurhash =
+    "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
 
 export default function ShopScreen() {
     const userContext = useContext(UserContext);
@@ -30,50 +35,78 @@ export default function ShopScreen() {
         {
             id: 0,
             name: "Blueprint Style",
-            price: 200,
+            price: 500,
         },
         {
             id: 1,
             name: "Overcast Style",
-            price: 200,
+            price: 500,
         },
         {
             id: 2,
             name: "X-Ray Style",
-            price: 200,
+            price: 500,
         },
         {
             id: 3,
             name: "Neon Style",
-            price: 200,
+            price: 500,
         },
         {
             id: 4,
             name: "Camo Style",
-            price: 200,
+            price: 500,
         },
         {
             id: 5,
-            name: "tbd Style",
+            name: "Vintage Style",
+            price: 500,
+        },
+    ];
+
+    const items = [
+        {
+            id: 0,
+            name: "Name Change Token",
             price: 200,
+        },
+        {
+            id: 1,
+            name: "Alliance Change Token",
+            price: 1000,
         },
     ];
 
     const coinOptions = [
         {
             id: 0,
-            amount: 200,
-            price: "$1.99",
+            amount: 100,
+            price: "$0.99",
         },
         {
             id: 1,
-            amount: 1000,
-            price: "$11.99",
+            amount: 550,
+            price: "$4.99",
         },
         {
             id: 2,
-            amount: 2000,
-            price: "$29.99",
+            amount: "1,200",
+            price: "$9.99",
+        },
+        {
+            id: 3,
+            amount: "2,500",
+            price: "$19.99",
+        },
+        {
+            id: 4,
+            amount: "5,200",
+            price: "$39.99",
+        },
+        {
+            id: 5,
+            amount: "15,000",
+            price: "$99.99",
         },
     ];
 
@@ -93,19 +126,20 @@ export default function ShopScreen() {
     return (
         <ScrollView style={styles.pageContainer}>
             <View style={styles.container}>
-                <View style={[styles.headerContainer, styles.section, ,]}>
-                    <Text style={[styles.text, { fontWeight: 700 }]}>
-                        Coming Soon
-                    </Text>
-                </View>
-                {/* uncomment below */}
-                {/* <View style={[styles.headerContainer, styles.section, ,]}>
-                    <Text style={[styles.text]}>Charcoins:</Text>
+                <View style={[styles.headerContainer, styles.section]}>
+                    <View style={styles.centContainer}>
+                        <FontAwesome6
+                            name="cent-sign"
+                            color="white"
+                            size={32}
+                        />
+                    </View>
+
                     <Text style={[styles.text, { fontWeight: 700 }]}>
                         {user?.charcoins}
                     </Text>
                 </View>
-                <Text style={styles.sectionTitle}>DEALS</Text>
+                {/* <Text style={styles.sectionTitle}>DEALS</Text>
                 <View
                     style={[
                         styles.headerContainer,
@@ -160,40 +194,7 @@ export default function ShopScreen() {
                     </TouchableOpacity>
                 </View> */}
 
-                {/* leave commented out */}
-                {/* <Text style={styles.sectionTitle}>Upgrades</Text>
-                <View
-                    style={[
-                        styles.headerContainer,
-                        styles.section,
-                        styles.productList,
-                    ]}
-                >
-                    <TouchableOpacity
-                        style={styles.productItem}
-                        onPress={() => handleIncreaseRadius()}
-                    >
-                        <MaterialCommunityIcons
-                            name="circle-expand"
-                            color="white"
-                            size={70}
-                        />
-                        <Text style={[styles.productText, { marginBottom: 4 }]}>
-                            + Radius
-                        </Text>
-                        <View style={styles.productPrice}>
-                            <FontAwesome
-                                name="user-circle"
-                                color="rgb(18, 18, 18)"
-                                size={16}
-                            />
-                            <Text style={[styles.priceText]}>200</Text>
-                        </View>
-                    </TouchableOpacity>
-                </View> */}
-
-                {/* uncomment below */}
-                {/* <Text style={styles.sectionTitle}>COSMETICS</Text>
+                <Text style={styles.sectionTitle}>COSMETICS</Text>
                 <View
                     style={[
                         styles.headerContainer,
@@ -208,7 +209,57 @@ export default function ShopScreen() {
                                 onPress={() => {}}
                                 key={product.id}
                             >
-                                <Fontisto name="map" color="white" size={50} />
+                                {/* <Image
+                                    style={styles.image}
+                                    source="https://picsum.photos/seed/696/3000/2000"
+                                    placeholder={{ blurhash }}
+                                    contentFit="cover"
+                                    transition={1000}
+                                /> */}
+                                <Text
+                                    style={[
+                                        styles.productText,
+                                        { marginVertical: 4 },
+                                    ]}
+                                >
+                                    {product.name}
+                                </Text>
+                                <View style={styles.productPrice}>
+                                    <FontAwesome
+                                        name="user-circle"
+                                        color="rgb(18, 18, 18)"
+                                        size={16}
+                                    />
+                                    <Text style={[styles.priceText]}>
+                                        {product.price}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+                <Text style={styles.sectionTitle}>ITEMS</Text>
+                <View
+                    style={[
+                        styles.headerContainer,
+                        styles.section,
+                        styles.altProductList,
+                    ]}
+                >
+                    {items.map((product) => {
+                        return (
+                            <TouchableOpacity
+                                style={styles.productItem}
+                                onPress={() => {}}
+                                key={product.id}
+                            >
+                                {/* <Image
+                                    style={styles.image}
+                                    source="https://picsum.photos/seed/696/3000/2000"
+                                    placeholder={{ blurhash }}
+                                    contentFit="cover"
+                                    transition={1000}
+                                /> */}
                                 <Text
                                     style={[
                                         styles.productText,
@@ -267,16 +318,32 @@ export default function ShopScreen() {
                             </TouchableOpacity>
                         );
                     })}
-                </View> */}
+                </View>
             </View>
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    image: {
+        flex: 1,
+        width: "100%",
+        backgroundColor: "#0553",
+    },
+    centContainer: {
+        display: "flex",
+        width: 50,
+        height: 50,
+        alignItems: "center",
+        justifyContent: "center",
+        borderColor: "white",
+        borderWidth: 2,
+        borderRadius: "100%",
+        paddingRight: 2,
+    },
     text: {
         color: "#fff",
-        fontSize: 24,
+        fontSize: 32,
     },
     pageContainer: {
         backgroundColor: "rgb(18, 18, 18)",
@@ -319,6 +386,13 @@ const styles = StyleSheet.create({
         rowGap: 30,
         flexWrap: "wrap",
         justifyContent: "space-between",
+    },
+    altProductList: {
+        display: "flex",
+        gap: 32,
+        rowGap: 30,
+        flexWrap: "wrap",
+        justifyContent: "space-evenly",
     },
     productItem: {
         display: "flex",

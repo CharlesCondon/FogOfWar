@@ -300,7 +300,7 @@ export async function fetchLeaderboardData(
             // Calculate area (score) in square meters
 
             const score =
-                unifiedArea && validAreas.length > 1
+                unifiedArea && validAreas.length >= 1
                     ? turf.area(unifiedArea)
                     : 0;
 
@@ -324,6 +324,143 @@ export async function fetchLeaderboardData(
         return leaderboardData;
     } catch (error) {
         console.error("Error fetching leaderboard data:", error);
+        return [];
+    }
+}
+export async function fetchTeamLeaderboardData(
+    id: string,
+    metric: boolean,
+    team: number
+) {
+    try {
+        let query = supabase
+            .from("users")
+            .select("id, name, country, activityLog")
+            .eq("alliance", team);
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        const leaderboardData = data.map((user) => {
+            const activityLog = user.activityLog || {};
+
+            // Convert activityLog object to array of entries: [date, data]
+            const activityEntries = Object.entries(activityLog);
+
+            // Extract all revealed areas for the period
+            const revealedAreas = activityEntries.map(
+                ([_, activity]: [string, any]) => activity.revealedArea
+            );
+
+            const validAreas = revealedAreas
+                .flat(Infinity)
+                .filter(
+                    (area: any) =>
+                        area &&
+                        area.geometry &&
+                        Array.isArray(area.geometry.coordinates) &&
+                        area.geometry.coordinates.length > 0
+                );
+
+            // Use Turf.js to unify the geometries
+            let unifiedArea: any;
+            if (validAreas.length > 1) {
+                unifiedArea = turf.featureCollection(validAreas);
+            } else {
+                unifiedArea = validAreas[0];
+            }
+
+            // Calculate area (score) in square meters
+            const score =
+                unifiedArea && validAreas.length >= 1
+                    ? turf.area(unifiedArea)
+                    : 0;
+
+            let formattedScore;
+            if (metric) {
+                formattedScore = parseFloat((score / 1000).toFixed(2));
+            } else {
+                formattedScore = parseFloat((score / 1609).toFixed(2));
+            }
+
+            return {
+                user: user.id === id,
+                username: user.name,
+                formattedScore,
+            };
+        });
+
+        // Sort by score descending
+        leaderboardData.sort((a, b) => b.formattedScore - a.formattedScore);
+
+        return leaderboardData;
+    } catch (error) {
+        console.error("Error fetching leaderboard data:", error);
+        return [];
+    }
+}
+export async function fetchTeamCountData() {
+    try {
+        // Fetch all users with their alliance
+        const { data, error } = await supabase.from("users").select("alliance");
+
+        if (error) throw error;
+
+        // Map the integer values to team names
+        const teamNames = ["Earth", "Wind", "Fire", "Water"];
+        const icons = ["mountain-sun", "wind", "fire", "water"];
+
+        // Initialize a count object for each team
+        const teamCounts = teamNames.map(() => 0);
+
+        // Count the number of users in each alliance
+        data.forEach((user) => {
+            if (
+                user.alliance !== null &&
+                user.alliance >= 0 &&
+                user.alliance < teamNames.length
+            ) {
+                teamCounts[user.alliance]++;
+            }
+        });
+
+        // Map the counts to the team names
+        const completeTeamsData = teamNames.map((teamName, index) => ({
+            name: teamName,
+            icon: icons[index],
+            memberCount: teamCounts[index],
+        }));
+
+        return completeTeamsData;
+    } catch (error) {
+        console.error("Error fetching teams data:", error);
+        return [];
+    }
+}
+export async function fetchTeamData(team: number) {
+    try {
+        // Fetch all users with their alliance
+        const { data, error } = await supabase
+            .from("users")
+            .select("name, country, activityLog, alliance")
+            .eq("alliance", team);
+
+        if (error) throw error;
+
+        // Map the integer values to team names
+        const teamNames = ["Earth", "Wind", "Fire", "Water"];
+        const icons = ["mountain-sun", "wind", "fire", "water"];
+        // Map the counts to the team names
+        const completeTeamData = {
+            name: teamNames[team],
+            icon: icons[team],
+            members: data,
+        };
+
+        return completeTeamData;
+    } catch (error) {
+        console.error("Error fetching teams data:", error);
         return [];
     }
 }
@@ -359,6 +496,25 @@ export const getUser = async (id: string) => {
     } catch (error) {
         console.error("Error fetching user data:", error);
         return {};
+    }
+};
+export const joinTeam = async (id: string, team: number) => {
+    try {
+        const { data, error } = await supabase
+            .from("users")
+            .update({ alliance: team }) // Update the activityLog column
+            .eq("id", id) // Ensure we're updating the correct user record
+            .single(); // Fetch a single row
+
+        if (error) {
+            console.log(error);
+            throw error;
+        }
+        console.log("Updated user alliance " + Date.now());
+        return true;
+    } catch (error: any) {
+        console.error("Error updating user activity log:", error.message);
+        throw error;
     }
 };
 

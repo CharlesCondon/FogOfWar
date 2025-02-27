@@ -16,4 +16,5 @@ export interface User {
     overlayColor: string;
     dotColor: string;
     country: string;
+    alliance: number;
 }

@@ -16,14 +16,17 @@ import { UserContext } from "@/context/UserContext";
 import { router, useLocalSearchParams } from "expo-router";
 import LoadingScreen from "@/components/Loading/Loading";
 import SlidingToggle from "@/components/SlidingToggle/slidingToggle";
-import { fetchLeaderboardData, useSession } from "@/context/AuthContext";
+import {
+    fetchLeaderboardData,
+    fetchTeamLeaderboardData,
+    useSession,
+} from "@/context/AuthContext";
 
 export default function SocialScreen() {
     const { session, isLoading } = useSession();
     const userContext = useContext(UserContext);
-    const time = useLocalSearchParams().time;
-    const area = useLocalSearchParams().area;
-    const [leaderboardData, setLeaderboardData] =
+    const team = useLocalSearchParams().team;
+    const [teamLeaderboardData, setTeamLeaderboardData] =
         useState<
             { user: boolean; username: string; formattedScore: number }[]
         >();
@@ -39,20 +42,18 @@ export default function SocialScreen() {
     const { user } = userContext;
 
     useEffect(() => {
-        const loadLeaderboard = async () => {
+        const loadTeamLeaderboard = async () => {
             if (user && session) {
-                const data = await fetchLeaderboardData(
+                const data = await fetchTeamLeaderboardData(
                     session.user.id,
                     user.metric,
-                    area,
-                    user.country,
-                    time
+                    user.alliance
                 );
-                setLeaderboardData(data);
+                setTeamLeaderboardData(data);
             }
         };
 
-        loadLeaderboard();
+        loadTeamLeaderboard();
     }, []);
 
     function capitalizeFirstLetter(val: any) {
@@ -63,11 +64,11 @@ export default function SocialScreen() {
     }
 
     const getUserPosition = () => {
-        if (!leaderboardData) return "";
-        return leaderboardData.findIndex((entry) => entry.user) + 1;
+        if (!teamLeaderboardData) return "";
+        return teamLeaderboardData.findIndex((entry) => entry.user) + 1;
     };
 
-    if (!leaderboardData) {
+    if (!teamLeaderboardData) {
         return <LoadingScreen />;
     }
 
@@ -75,12 +76,12 @@ export default function SocialScreen() {
         <ScrollView style={styles.pageContainer}>
             <View style={styles.container}>
                 <Text style={styles.sectionTitle}>
-                    {capitalizeFirstLetter(area)} Leaderboard
+                    Team {capitalizeFirstLetter(team)} Leaderboard
                 </Text>
 
                 <View style={styles.leaderboardList}>
-                    {leaderboardData && leaderboardData.length > 0 ? (
-                        leaderboardData.map((entry, index) => (
+                    {teamLeaderboardData && teamLeaderboardData.length > 0 ? (
+                        teamLeaderboardData.map((entry, index) => (
                             <View
                                 key={index}
                                 style={[
