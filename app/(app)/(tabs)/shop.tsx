@@ -6,7 +6,7 @@ import {
     FontAwesome5,
     FontAwesome6,
 } from "@expo/vector-icons";
-// import { Image } from "expo-image";
+import { Image } from "expo-image";
 import { useContext, useEffect, useState } from "react";
 import {
     Text,
@@ -36,31 +36,37 @@ export default function ShopScreen() {
             id: 0,
             name: "Blueprint Style",
             price: 500,
+            url: require("@/assets/images/blueprint.png"),
         },
         {
             id: 1,
             name: "Overcast Style",
             price: 500,
+            url: require("@/assets/images/overcast.png"),
         },
         {
             id: 2,
             name: "X-Ray Style",
             price: 500,
+            url: require("@/assets/images/x-ray.png"),
         },
         {
             id: 3,
             name: "Neon Style",
             price: 500,
+            url: require("@/assets/images/neon.png"),
         },
         {
             id: 4,
             name: "Camo Style",
             price: 500,
+            url: require("@/assets/images/camo.png"),
         },
         {
             id: 5,
             name: "Vintage Style",
             price: 500,
+            url: require("@/assets/images/vintage.png"),
         },
     ];
 
@@ -209,13 +215,14 @@ export default function ShopScreen() {
                                 onPress={() => {}}
                                 key={product.id}
                             >
-                                {/* <Image
+                                <Image
                                     style={styles.image}
-                                    source="https://picsum.photos/seed/696/3000/2000"
+                                    source={product.url}
                                     placeholder={{ blurhash }}
-                                    contentFit="cover"
-                                    transition={1000}
-                                /> */}
+                                    contentFit="contain"
+                                    transition={500}
+                                />
+
                                 <Text
                                     style={[
                                         styles.productText,
@@ -327,8 +334,12 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
     image: {
         flex: 1,
-        width: "100%",
-        backgroundColor: "#0553",
+        width: 80,
+        height: 80,
+        maxHeight: 80,
+        borderWidth: 1,
+        borderColor: "rgb(18, 18, 18)",
+        borderRadius: 6,
     },
     centContainer: {
         display: "flex",
@@ -398,7 +409,7 @@ const styles = StyleSheet.create({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: "flex-start",
         gap: 4,
         width: 80,
         alignSelf: "stretch",

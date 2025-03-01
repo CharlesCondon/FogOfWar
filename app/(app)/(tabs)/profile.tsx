@@ -351,118 +351,66 @@ export default function ProfileScreen() {
         let totalDist = data.reduce((total, curr) => (total += curr), 0);
         return totalDist;
     }
-    function getTimeData() {
+    function generateDateRange(period: string): string[] {
         const now = new Date();
-        const startOfPeriod = getStartOfPeriod(now, activityTime);
+        let startDate: Date;
+
+        switch (period) {
+            case "Week":
+                // Get the previous Sunday
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - now.getDay());
+                break;
+            case "Month":
+                // Get the first day of the current month
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                break;
+            case "Year":
+                // Get the first day of the current year
+                startDate = new Date(now.getFullYear(), 0, 1);
+                break;
+            default:
+                startDate = now;
+        }
+
+        const dateRange: string[] = [];
+        let currentDate = startDate;
+
+        while (currentDate <= now) {
+            dateRange.push(formatDate(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        return dateRange;
+    }
+    function fillMissingData(
+        dateRange: string[],
+        activityData: Record<string, number>
+    ): number[] {
+        return dateRange.map((date) => activityData[date] || 0);
+    }
+    function getTimeData() {
+        const dateRange = generateDateRange(activityTime);
         const activityLog = user?.activityLog || {};
-        const activityEntries = Object.entries(activityLog);
 
-        const filteredActivities = activityEntries.filter(([date]) => {
-            const activityDate = new Date(date);
-
-            // Normalize both dates in UTC to ignore time
-            const normalizedActivityDate = new Date(
-                Date.UTC(
-                    activityDate.getUTCFullYear(),
-                    activityDate.getUTCMonth(),
-                    activityDate.getUTCDate()
-                )
-            );
-            const normalizedStartOfPeriod = new Date(
-                Date.UTC(
-                    startOfPeriod.getUTCFullYear(),
-                    startOfPeriod.getUTCMonth(),
-                    startOfPeriod.getUTCDate()
-                )
-            );
-
-            return normalizedActivityDate >= normalizedStartOfPeriod;
-        });
-
-        const allCoordinates = filteredActivities.map(
-            ([_, activity]: [string, any]) => activity.revealedArea
+        // Convert activityLog to a simpler format
+        const activityData = Object.entries(activityLog).reduce(
+            (acc, [date, log]) => {
+                acc[date] = log.revealedArea ? calcArea(log.revealedArea) : 0;
+                return acc;
+            },
+            {} as Record<string, number>
         );
 
-        // const today = new Date();
-        // const lastXDays = [];
-        // let days = 0;
-        // if (activityTime === "Week") {
-        //     days = 6;
-        // } else if (activityTime === "Month") {
-        //     days = 30;
-        // } else {
-        //     days = 364;
-        // }
+        const data = fillMissingData(dateRange, activityData);
 
-        // // Get the past 7 days' dates formatted as YYYY-MM-DD
-        // for (let i = days; i >= 0; i--) {
-        //     const date = new Date(today);
-        //     date.setDate(today.getDate() - i);
-        //     lastXDays.push(formatDate(date));
-        // }
-
-        const data = allCoordinates.map((day) => {
-            //const revealedArea = user?.activityLog?.[day]?.revealedArea;
-
-            // If nothing is saved for the day, return 0.
-            if (!day) return 0;
-
-            let area = 0;
-            if (Array.isArray(day)) {
-                // Sum the area of each valid feature.
-                area = day.reduce((total, feature) => {
-                    if (
-                        feature &&
-                        feature.geometry &&
-                        Array.isArray(feature.geometry.coordinates) &&
-                        feature.geometry.coordinates.length > 0
-                    ) {
-                        try {
-                            return total + turf.area(feature);
-                        } catch (e) {
-                            console.error(
-                                "Error calculating area for feature:",
-                                e
-                            );
-                            return total;
-                        }
-                    }
-                    return total;
-                }, 0);
-            } else if (
-                day.geometry &&
-                Array.isArray(day.geometry.coordinates) &&
-                day.geometry.coordinates.length > 0
-            ) {
-                try {
-                    area = turf.area(day);
-                } catch (e) {
-                    console.error("Error calculating area:", e);
-                    area = 0;
-                }
-            } else {
-                // If the geometry is empty or invalid, set the area to 0.
-                area = 0;
-            }
-
-            return user?.metric ? area / 1000 : area / 1609;
-        });
-
-        const labels = filteredActivities.map((d, i) => {
-            const [year, month, day] = d[0].split("-");
+        const labels = dateRange.map((date, i) => {
+            const [year, month, day] = date.split("-");
             if (activityTime === "Month") {
-                if (
-                    i % 7 !== 0 &&
-                    i !== 0 &&
-                    i !== filteredActivities.length - 1
-                )
+                if (i % 7 !== 0 && i !== 0 && i !== dateRange.length - 1)
                     return "";
             } else if (activityTime === "Year") {
-                if (
-                    i % 30 !== 0 &&
-                    i !== 0 &&
-                    i !== filteredActivities.length - 1
-                )
+                if (i % 30 !== 0 && i !== 0 && i !== dateRange.length - 1)
                     return "";
             }
             return `${parseInt(month)}/${parseInt(day)}`; // Convert to "M/D"

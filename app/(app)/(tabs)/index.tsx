@@ -1,5 +1,12 @@
 import "expo-dev-client";
-import React, { useState, useEffect, useContext, useRef, useMemo } from "react";
+import React, {
+    useState,
+    useEffect,
+    useContext,
+    useRef,
+    useMemo,
+    useCallback,
+} from "react";
 import {
     StyleSheet,
     View,
@@ -74,10 +81,10 @@ export default function Index() {
     const [todaysArea, setTodaysArea] = useState<any>(null);
     const [staticRevealedArea, setStaticRevealedArea] = useState<any>(null);
 
-    // const unionDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
     const today = formatDate(new Date());
     const camera = useRef<Mapbox.Camera>(null);
+    const lastUpdateTime = useRef<number>(0);
+    const lastFogUpdate = useRef<number>(0);
 
     const worldPolygon = turf.polygon([
         [
@@ -139,30 +146,6 @@ export default function Index() {
         }
     }, []);
 
-    // Save for later
-    const updateLocation = (newCoords: Location.LocationObjectCoords) => {
-        if (!location) {
-            console.log("setting new location");
-            setLocation(newCoords);
-        } else {
-            const from = turf.point([location.longitude, location.latitude]);
-            const to = turf.point([newCoords.longitude, newCoords.latitude]);
-            const distance = turf.distance(from, to, { units: "meters" });
-            // Only update if the user has moved more than 5 meters
-            console.log(distance);
-            if (distance > 10) {
-                console.log("resetting location");
-                setLocation(newCoords);
-            }
-        }
-    };
-
-    const debouncedSetLocation = useRef(
-        debounce((coords: Location.LocationObjectCoords) => {
-            updateLocation(coords);
-        }, 500)
-    ).current;
-
     //Request location permission and watch for updates
     useEffect(() => {
         let subscription: Location.LocationSubscription;
@@ -181,15 +164,15 @@ export default function Index() {
 
             subscription = await Location.watchPositionAsync(
                 {
-                    accuracy: Location.Accuracy.BestForNavigation,
-                    distanceInterval: 10, // Update every 10 meters
+                    accuracy: Location.Accuracy.High,
+                    distanceInterval: 20, // Update every 10 meters
                 },
                 (newLocation) => {
-                    if (!location) {
-                        setLocation(newLocation.coords);
-                    } else {
-                        debouncedSetLocation(newLocation.coords);
-                    }
+                    //if (!location) {
+                    setLocation(newLocation.coords);
+                    //} else {
+                    //setLocation(newLocation.coords);
+                    //}
                 }
             );
         })();
@@ -205,6 +188,12 @@ export default function Index() {
 
     useEffect(() => {
         if (!location) return;
+
+        const now = Date.now();
+        if (now - lastUpdateTime.current < 3000) return; // Skip if less than 1 second since last update
+
+        lastUpdateTime.current = now;
+
         const center: [number, number] = [
             location.longitude,
             location.latitude,
@@ -220,12 +209,12 @@ export default function Index() {
                     units: "meters",
                 }
             );
-            if (distance > 10) return [...prev, center];
+            if (distance > 20) {
+                return [...prev, center];
+            }
             return prev;
         });
 
-        // if (unionDebounceRef.current) clearTimeout(unionDebounceRef.current);
-        // unionDebounceRef.current = setTimeout(() => {
         const radius = 50; // meters
         const newCircle = turf.circle(center, radius, {
             steps: 12,
@@ -236,24 +225,7 @@ export default function Index() {
         } else {
             setTodaysArea((prev: any) => [...prev, newCircle]);
         }
-        //}, 500);
     }, [location]);
-
-    // useEffect(() => {
-    //     // Starting from a default location if not already set
-    //     setLocation((prev) => prev || { latitude: 33.026, longitude: -97.1 });
-    //     const simulationInterval = setInterval(() => {
-    //         setLocation((prev) => {
-    //             if (!prev) return { latitude: 33.026, longitude: -97.1 };
-    //             return {
-    //                 ...prev,
-    //                 latitude: prev.latitude - 0.0,
-    //                 longitude: prev.longitude + 0.0,
-    //             };
-    //         });
-    //     }, 100); // update every 1 second; adjust as needed
-    //     return () => clearInterval(simulationInterval);
-    // }, []);
 
     const computedData = useMemo(() => {
         if (!todaysArea) return null;
@@ -289,6 +261,10 @@ export default function Index() {
     useEffect(() => {
         if (!computedData) return;
 
+        const now = Date.now();
+        if (now - lastFogUpdate.current < 5000) return; // Only update every 5 sec
+        lastFogUpdate.current = now;
+
         const flatRevealed = computedData.totalRevealedArea
             .flat(Infinity)
             .filter(
@@ -317,15 +293,7 @@ export default function Index() {
                 : worldPolygon;
 
         setFogGeoJSON(turf.polygonSmooth(fogPolygon));
-        setPathLine(computedData.pathLine);
-
-        // Optionally update persistent storage for today's log if new coordinates are added.
-        const currentCount = user.activityLog?.[today]?.coordinate?.length || 0;
-        if (
-            computedData.todaysCoordinates.length > currentCount &&
-            session &&
-            setUser
-        ) {
+        if (session && setUser) {
             const newLog = {
                 ...user.activityLog,
                 [today]: {
@@ -338,23 +306,13 @@ export default function Index() {
         }
     }, [computedData]);
 
-    // function onZoom(event: boolean) {
-    //     if (event) {
-    //         camera.current?.zoomTo((zoomLevel += 0.25), 250);
-    //         return;
-    //     }
-    //     camera.current?.zoomTo((zoomLevel -= 0.25), 250);
-    //     return;
-    // }
-
-    function centerMap() {
+    const centerMap = useCallback(() => {
         if (!location) return;
         camera.current?.setCamera({
-            centerCoordinate: [location?.longitude, location?.latitude],
+            centerCoordinate: [location.longitude, location.latitude],
             zoomLevel: 16,
         });
-        return;
-    }
+    }, [location]);
 
     return (
         <View style={styles.container}>
@@ -393,50 +351,7 @@ export default function Index() {
                             />
                         )}
 
-                        {/* Hero's Journey Path */}
-                        {/* {pathLine && showJourney && (
-                            <Mapbox.ShapeSource
-                                id="pathSource"
-                                shape={turf.bezierSpline(pathLine)}
-                            >
-                                <Mapbox.LineLayer
-                                    id="pathLayer"
-                                    belowLayerID="circleLayers"
-                                    style={{
-                                        lineColor: "#F00", // Change to your desired color
-                                        lineWidth: 4,
-                                        lineOpacity: 0.5,
-                                        lineCap: "round",
-                                        lineDasharray: [1, 2],
-                                        lineBlur: 0,
-                                    }}
-                                />
-                            </Mapbox.ShapeSource>
-                        )} */}
-                        {/* {pathLine &&
-                        showJourney &&
-                        pathLine.geometry.coordinates.length > 0 && (
-                            <Mapbox.PointAnnotation
-                                id="animatedPoint"
-                                coordinate={
-                                    pathLine.geometry.coordinates[
-                                        animationIndex
-                                    ]
-                                }
-                            >
-                                <View
-                                    style={{
-                                        width: 12,
-                                        height: 12,
-                                        backgroundColor: "#F00",
-                                        borderRadius: "100%",
-                                        opacity: 0.15,
-                                    }}
-                                />
-                            </Mapbox.PointAnnotation>
-                        )} */}
-
-                        {/* <Mapbox.ShapeSource
+                        <Mapbox.ShapeSource
                             id="userLocation"
                             shape={turf.point([
                                 location.longitude,
@@ -454,11 +369,11 @@ export default function Index() {
                                     circleStrokeColor: "white", // Border color
                                 }}
                             />
-                        </Mapbox.ShapeSource> */}
+                        </Mapbox.ShapeSource>
                     </Mapbox.MapView>
                 </>
             )}
-            {!location && !fogGeoJSON && (
+            {!location && (
                 <View style={styles.loadingContainer}>
                     <LoadingScreen />
                 </View>
@@ -472,25 +387,6 @@ export default function Index() {
             >
                 <Ionicons name="settings-outline" color="#fff" size={26} />
             </TouchableHighlight>
-
-            {/* Zoom In/Out Buttons */}
-            {/* <View style={styles.zoomControls}>
-                <TouchableOpacity
-                    style={[styles.zoomButton, styles.zoomInButton]}
-                    onPress={() => onZoom(true)}
-                    accessibilityLabel="Zoom In"
-                >
-                    <Text style={styles.zoomButtonText}>+</Text>
-                </TouchableOpacity>
-                <View style={styles.divider} />
-                <TouchableOpacity
-                    style={[styles.zoomButton, styles.zoomOutButton]}
-                    onPress={() => onZoom(false)}
-                    accessibilityLabel="Zoom Out"
-                >
-                    <Text style={styles.zoomButtonText}>-</Text>
-                </TouchableOpacity>
-            </View> */}
 
             {/* Center Map Button */}
             <View style={styles.centerUserButton}>
@@ -544,27 +440,6 @@ export default function Index() {
                     />
                 </TouchableOpacity>
             </View>
-
-            {/* Toggle Journey Button */}
-            {/* <View
-                style={[
-                    styles.journeyToggleContainer,
-                    !overlay && styles.journeyToggleDisabled,
-                ]}
-            >
-                <TouchableOpacity
-                    style={[styles.journeyToggle]}
-                    onPress={() => setShowJourney(!showJourney)}
-                    accessibilityLabel="Toggle Journey Path"
-                    disabled={!overlay}
-                >
-                    <Ionicons
-                        name={showJourney ? "footsteps-outline" : "footsteps"}
-                        color="#FFF"
-                        size={26}
-                    />
-                </TouchableOpacity>
-            </View> */}
         </View>
     );
 }

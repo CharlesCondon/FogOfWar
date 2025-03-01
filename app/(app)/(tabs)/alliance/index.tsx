@@ -74,6 +74,8 @@ export default function AllianceScreen() {
             const success = await joinTeam(session.user.id, team);
             if (success) {
                 setUser({ ...user, alliance: team });
+                const data = await fetchTeamData(team);
+                setUserTeamData(data as any);
             } else {
                 Alert.alert(
                     "Error",
@@ -87,11 +89,7 @@ export default function AllianceScreen() {
         Alert.alert("Feature Coming Soon");
     }
 
-    if (!user.alliance && !teamsData) {
-        return <LoadingScreen />;
-    }
-
-    if (user.alliance && !userTeamData) {
+    if ((!user.alliance && !teamsData) || (user.alliance && !userTeamData)) {
         return <LoadingScreen />;
     }
 

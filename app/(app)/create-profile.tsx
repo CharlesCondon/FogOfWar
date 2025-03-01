@@ -45,17 +45,12 @@ export default function CreateProfile() {
     }
 
     const handleSubmit = async () => {
-        if (!name || !units || !selectedCountry) {
+        if (!name || !units) {
             Alert.alert("All fields required");
             return;
         }
         try {
-            await createNewUser(
-                session.user.id,
-                name,
-                units,
-                selectedCountry
-            ).then(() => {
+            await createNewUser(session.user.id, name, units).then(() => {
                 router.push("/"); // Navigate after successful setup
             });
         } catch (error: any) {
@@ -90,10 +85,10 @@ export default function CreateProfile() {
                 onSelect={setUnits}
                 placeholder="Units of Measurement"
             />
-            <CountryDropdown
+            {/* <CountryDropdown
                 selectedCountry={selectedCountry}
                 onSelect={setSelectedCountry}
-            />
+            /> */}
             <TouchableOpacity
                 style={[styles.productItem]}
                 onPress={handleSubmit}

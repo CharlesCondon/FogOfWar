@@ -27,7 +27,9 @@ export default function StatCard({
     const shouldShowSpinner =
         typeof value === "number"
             ? value === 0
-            : !value || (parseFloat(value) === 0 && title === "World Revealed");
+            : !value ||
+              (parseFloat(value) === 0 && title === "Total Area Revealed");
+
     return size === "small" ? (
         <View style={styles.squareStatItem}>
             <View style={styles.statIconValue}>

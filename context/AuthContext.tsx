@@ -121,8 +121,7 @@ export async function handleAppleAuth() {
 export const createNewUser = async (
     id: string,
     name: string,
-    units: string,
-    country: string
+    units: string
 ) => {
     try {
         const { data, error } = await supabase
@@ -132,7 +131,6 @@ export const createNewUser = async (
                     id,
                     name,
                     metric: units === "Kilometer" ? true : false,
-                    country,
                     joinedDate: new Date(),
                     overlayColor: "rgb(0,0,0)",
                     dotColor: "rgb(0,0,0)",
