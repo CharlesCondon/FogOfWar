@@ -1,11 +1,4 @@
-import {
-    FontAwesome,
-    Ionicons,
-    MaterialCommunityIcons,
-    Fontisto,
-    FontAwesome5,
-    FontAwesome6,
-} from "@expo/vector-icons";
+import { FontAwesome, FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useContext, useEffect, useState } from "react";
 import {
@@ -14,61 +7,76 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
+    Alert,
+    Linking,
 } from "react-native";
 import { UserContext } from "@/context/UserContext";
-import { router } from "expo-router";
 import LoadingScreen from "@/components/Loading/Loading";
+import Purchases, { PurchasesPackage } from "react-native-purchases";
+import {
+    updateCoins,
+    updateCosmetics,
+    useSession,
+} from "@/context/AuthContext";
 
 const blurhash =
     "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
 
 export default function ShopScreen() {
     const userContext = useContext(UserContext);
-
-    if (!userContext) {
-        return <LoadingScreen />;
-    }
-
-    const { user, setUser } = userContext;
-
-    const cosmetics = [
+    const { session } = useSession();
+    const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+    const [isPurchasing, setIsPurchasing] = useState(false);
+    const [shopCosmetics, setShopCosmetics] = useState([
         {
             id: 0,
             name: "Blueprint Style",
             price: 500,
             url: require("@/assets/images/blueprint.png"),
+            disabled: false,
         },
         {
             id: 1,
             name: "Overcast Style",
             price: 500,
             url: require("@/assets/images/overcast.png"),
+            disabled: false,
         },
         {
             id: 2,
             name: "X-Ray Style",
             price: 500,
             url: require("@/assets/images/x-ray.png"),
+            disabled: false,
         },
         {
             id: 3,
             name: "Neon Style",
             price: 500,
             url: require("@/assets/images/neon.png"),
+            disabled: false,
         },
         {
             id: 4,
             name: "Camo Style",
             price: 500,
             url: require("@/assets/images/camo.png"),
+            disabled: false,
         },
         {
             id: 5,
             name: "Vintage Style",
             price: 500,
             url: require("@/assets/images/vintage.png"),
+            disabled: false,
         },
-    ];
+    ]);
+
+    if (!userContext) {
+        return <LoadingScreen />;
+    }
+
+    const { user, setUser } = userContext;
 
     const items = [
         {
@@ -83,51 +91,110 @@ export default function ShopScreen() {
         },
     ];
 
-    const coinOptions = [
-        {
-            id: 0,
-            amount: 100,
-            price: "$0.99",
-        },
-        {
-            id: 1,
-            amount: 550,
-            price: "$4.99",
-        },
-        {
-            id: 2,
-            amount: "1,200",
-            price: "$9.99",
-        },
-        {
-            id: 3,
-            amount: "2,500",
-            price: "$19.99",
-        },
-        {
-            id: 4,
-            amount: "5,200",
-            price: "$39.99",
-        },
-        {
-            id: 5,
-            amount: "15,000",
-            price: "$99.99",
-        },
-    ];
-
-    function handleIncreaseRadius() {
-        if (user && user.charcoins >= 200) {
-            if (setUser) {
-                setUser({
-                    ...user,
-                    charcoins: (user.charcoins -= 200),
-                    radius: (user.radius += 100),
-                });
-                router.push("/");
-            }
-        }
+    function formatNumber(num: string) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
+
+    useEffect(() => {
+        // Get current available packages
+        const getPackages = async () => {
+            try {
+                const offerings = await Purchases.getOfferings();
+                if (
+                    offerings.current !== null &&
+                    offerings.current.availablePackages.length !== 0
+                ) {
+                    const sortedOfferings =
+                        offerings.current.availablePackages.sort(
+                            (a, b) => a.product.price - b.product.price
+                        );
+                    setPackages(sortedOfferings);
+                }
+            } catch (e: any) {
+                Alert.alert("Error getting offers", e.message);
+            }
+        };
+
+        getPackages();
+    }, []);
+
+    useEffect(() => {
+        if (user?.cosmetics && user.cosmetics.length > 0) {
+            setShopCosmetics((prevCosmetics) => {
+                const updatedCosmetics = [...prevCosmetics];
+                user.cosmetics.forEach((cosmeticId) => {
+                    if (
+                        cosmeticId >= 0 &&
+                        cosmeticId < updatedCosmetics.length
+                    ) {
+                        updatedCosmetics[cosmeticId] = {
+                            ...updatedCosmetics[cosmeticId],
+                            disabled: true,
+                        };
+                    }
+                });
+                return updatedCosmetics;
+            });
+        }
+    }, [user?.cosmetics]);
+
+    const handleLink = () => {
+        const url =
+            "https://gist.github.com/CharlesCondon/9d3eaa5555d4ef0cdcecee2c1dc2cf4d";
+        Linking.openURL(url).catch((err) =>
+            console.error("An error occurred", err)
+        );
+    };
+
+    const handlePurchasePachage = async (purchasePackage: PurchasesPackage) => {
+        setIsPurchasing(true);
+        console.log(JSON.stringify(purchasePackage));
+        try {
+            const { customerInfo } = await Purchases.purchasePackage(
+                purchasePackage
+            );
+            if (customerInfo) {
+                const coins = parseInt(purchasePackage.identifier);
+
+                if (setUser && user && session) {
+                    updateCoins(session.user.id, user.charcoins + coins);
+                    setUser({ ...user, charcoins: user.charcoins + coins });
+                }
+            }
+        } catch (e: any) {
+            if (
+                e.code ===
+                Purchases.PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR
+            ) {
+                Alert.alert("Error purchasing package", e.message);
+            }
+        } finally {
+            setIsPurchasing(false);
+        }
+    };
+
+    const handlePurchaseCosmetic = (cosmeticId: number, price: number) => {
+        if (
+            user &&
+            (user.cosmetics.includes(cosmeticId) || user.charcoins < price)
+        ) {
+            Alert.alert("Unable to purchase cosmetic");
+            return;
+        }
+
+        if (setUser && user && session) {
+            updateCosmetics(
+                session.user.id,
+                [...user.cosmetics, cosmeticId],
+                user.charcoins - price
+            );
+            setUser({
+                ...user,
+                charcoins: user.charcoins - price,
+                cosmetics: [...user.cosmetics, cosmeticId],
+            });
+        }
+    };
 
     return (
         <ScrollView style={styles.pageContainer}>
@@ -142,7 +209,11 @@ export default function ShopScreen() {
                     </View>
 
                     <Text style={[styles.text, { fontWeight: 700 }]}>
-                        {user?.charcoins}
+                        {user?.charcoins ? (
+                            formatNumber(user?.charcoins.toString())
+                        ) : (
+                            <></>
+                        )}
                     </Text>
                 </View>
                 {/* <Text style={styles.sectionTitle}>DEALS</Text>
@@ -208,36 +279,52 @@ export default function ShopScreen() {
                         styles.productList,
                     ]}
                 >
-                    {cosmetics.map((product) => {
+                    {shopCosmetics.map((product) => {
                         return (
                             <TouchableOpacity
-                                style={styles.productItem}
-                                onPress={() => {}}
+                                style={[
+                                    styles.productItem,
+                                    product.disabled && styles.productDisabled,
+                                ]}
+                                onPress={() => {
+                                    handlePurchaseCosmetic(
+                                        product.id,
+                                        product.price
+                                    );
+                                }}
                                 key={product.id}
+                                disabled={product.disabled}
                             >
-                                <Image
-                                    style={styles.image}
-                                    source={product.url}
-                                    placeholder={{ blurhash }}
-                                    contentFit="contain"
-                                    transition={500}
-                                />
-
-                                <Text
+                                <View>
+                                    <Image
+                                        style={styles.image}
+                                        source={product.url}
+                                        placeholder={{ blurhash }}
+                                        contentFit="contain"
+                                        transition={500}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.productText,
+                                            { marginVertical: 4 },
+                                        ]}
+                                    >
+                                        {product.name}
+                                    </Text>
+                                </View>
+                                <View
                                     style={[
-                                        styles.productText,
-                                        { marginVertical: 4 },
+                                        styles.productPrice,
+                                        product.disabled &&
+                                            styles.productPriceDisabled,
                                     ]}
                                 >
-                                    {product.name}
-                                </Text>
-                                <View style={styles.productPrice}>
                                     <FontAwesome
                                         name="user-circle"
                                         color="rgb(18, 18, 18)"
                                         size={16}
                                     />
-                                    <Text style={[styles.priceText]}>
+                                    <Text style={styles.priceText}>
                                         {product.price}
                                     </Text>
                                 </View>
@@ -245,7 +332,7 @@ export default function ShopScreen() {
                         );
                     })}
                 </View>
-                <Text style={styles.sectionTitle}>ITEMS</Text>
+                {/* <Text style={styles.sectionTitle}>ITEMS</Text>
                 <View
                     style={[
                         styles.headerContainer,
@@ -260,13 +347,11 @@ export default function ShopScreen() {
                                 onPress={() => {}}
                                 key={product.id}
                             >
-                                {/* <Image
-                                    style={styles.image}
-                                    source="https://picsum.photos/seed/696/3000/2000"
-                                    placeholder={{ blurhash }}
-                                    contentFit="cover"
-                                    transition={1000}
-                                /> */}
+                                <MaterialIcons
+                                    name="token"
+                                    color="white"
+                                    size={50}
+                                />
                                 <Text
                                     style={[
                                         styles.productText,
@@ -288,7 +373,7 @@ export default function ShopScreen() {
                             </TouchableOpacity>
                         );
                     })}
-                </View>
+                </View> */}
                 <Text style={styles.sectionTitle}>CHARCOINS</Text>
                 <View
                     style={[
@@ -297,12 +382,12 @@ export default function ShopScreen() {
                         styles.productList,
                     ]}
                 >
-                    {coinOptions.map((option) => {
+                    {packages.map((option) => {
                         return (
                             <TouchableOpacity
                                 style={styles.productItem}
-                                onPress={() => {}}
-                                key={option.id}
+                                onPress={() => handlePurchasePachage(option)}
+                                key={option.identifier}
                             >
                                 <FontAwesome5
                                     name="coins"
@@ -315,23 +400,56 @@ export default function ShopScreen() {
                                         { marginVertical: 4 },
                                     ]}
                                 >
-                                    {option.amount}
+                                    {option.identifier} Coins
                                 </Text>
                                 <View style={styles.productPrice}>
                                     <Text style={[styles.priceText]}>
-                                        {option.price}
+                                        ${option.product.price.toFixed(2)}
                                     </Text>
                                 </View>
                             </TouchableOpacity>
                         );
                     })}
                 </View>
+                <View style={[styles.policiesContainer]}>
+                    {/* <FontAwesome name="user-circle" color="white" size={48} /> */}
+                    <TouchableOpacity style={{}} onPress={handleLink}>
+                        <Text
+                            style={{
+                                color: "#fff",
+                                fontSize: 10,
+                                textAlign: "right",
+                                opacity: 0.5,
+                            }}
+                        >
+                            Privacy Policy ~ Terms & Conditions
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                {isPurchasing && <View style={styles.overlay} />}
             </View>
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    productDisabled: {
+        opacity: 0.25,
+    },
+    overlay: {
+        flex: 1,
+        position: "absolute",
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0.5,
+        backgroundColor: "black",
+    },
+    policiesContainer: {
+        marginHorizontal: 20,
+        marginBottom: 20,
+    },
     image: {
         flex: 1,
         width: 80,
@@ -409,7 +527,7 @@ const styles = StyleSheet.create({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "flex-start",
+        justifyContent: "space-between",
         gap: 4,
         width: 80,
         alignSelf: "stretch",
@@ -427,6 +545,9 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         paddingVertical: 2,
         paddingHorizontal: 8,
+    },
+    productPriceDisabled: {
+        backgroundColor: "rgb(120,120,120)",
     },
     priceText: {
         color: "rgb(18, 18, 18)",

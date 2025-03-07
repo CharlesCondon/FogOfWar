@@ -1,10 +1,9 @@
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
-import { useContext, useEffect, useState } from "react";
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { useContext } from "react";
+import { Text, View, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { UserContext } from "@/context/UserContext";
-import * as turf from "@turf/turf";
 import { router } from "expo-router";
 import { updateUnits, useSession } from "../../../../context/AuthContext";
+import Purchases from "react-native-purchases";
 import LoadingScreen from "@/components/Loading/Loading";
 
 export default function SettingsScreen() {
@@ -61,6 +60,14 @@ export default function SettingsScreen() {
         }
         return "Miles";
     }
+
+    const restorePurchase = async () => {
+        try {
+            await Purchases.restorePurchases();
+        } catch (e: any) {
+            Alert.alert("Error restoring purchases", e.message);
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -142,6 +149,16 @@ export default function SettingsScreen() {
                         </View>
                     </View>
                 </TouchableOpacity>
+                <View style={styles.divider} />
+                <TouchableOpacity onPress={() => restorePurchase()}>
+                    <View style={[styles.statsContainer, styles.restoreBtn]}>
+                        <View style={{}}>
+                            <Text style={{ fontSize: 12, color: "#808080" }}>
+                                Restore Purchases
+                            </Text>
+                        </View>
+                    </View>
+                </TouchableOpacity>
             </View>
             <TouchableOpacity
                 style={[styles.logoutButton]}
@@ -182,6 +199,10 @@ const styles = StyleSheet.create({
     },
     section: {
         backgroundColor: "rgb(30, 30, 30)",
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+    },
+    restoreBtn: {
         paddingHorizontal: 20,
         paddingVertical: 20,
     },

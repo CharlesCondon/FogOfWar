@@ -1,13 +1,11 @@
 import { Redirect, router } from "expo-router";
 import {
     Alert,
-    Button,
     Text,
     TextInput,
     View,
     StyleSheet,
     TouchableOpacity,
-    ScrollView,
 } from "react-native";
 import { useSession, createNewUser } from "../../context/AuthContext";
 import { useContext, useState } from "react";

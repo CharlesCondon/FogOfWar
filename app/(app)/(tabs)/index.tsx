@@ -10,11 +10,9 @@ import React, {
 import {
     StyleSheet,
     View,
-    Text,
     TouchableOpacity,
     TouchableHighlight,
     Alert,
-    Platform,
 } from "react-native";
 import Mapbox from "@rnmapbox/maps";
 import * as Location from "expo-location";

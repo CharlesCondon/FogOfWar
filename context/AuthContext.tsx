@@ -220,6 +220,42 @@ export const updateUnits = async (id: string, metric: boolean) => {
         throw error;
     }
 };
+export const updateCoins = async (id: string, charcoins: number) => {
+    try {
+        const { data, error } = await supabase
+            .from("users")
+            .update({ charcoins }) // Update the activityLog column
+            .eq("id", id) // Ensure we're updating the correct user record
+            .single(); // Fetch a single row
+
+        if (error) throw error;
+        console.log("Updated coins");
+        return data;
+    } catch (error: any) {
+        console.error(`Error updating coins:`, error.message);
+        throw error;
+    }
+};
+export const updateCosmetics = async (
+    id: string,
+    cosmetics: number[],
+    charcoins: number
+) => {
+    try {
+        const { data, error } = await supabase
+            .from("users")
+            .update({ charcoins, cosmetics }) // Update the activityLog column
+            .eq("id", id) // Ensure we're updating the correct user record
+            .single(); // Fetch a single row
+
+        if (error) throw error;
+        console.log("Updated owned cosmetics");
+        return data;
+    } catch (error: any) {
+        console.error(`Error purchasing cosmetic:`, error.message);
+        throw error;
+    }
+};
 export async function fetchLeaderboardData(
     id: string,
     metric: boolean,

@@ -12,9 +12,9 @@ export interface User {
         };
     };
     charcoins: number;
-    radius: number;
     overlayColor: string;
     dotColor: string;
     country: string;
     alliance: number;
+    cosmetics: number[];
 }
